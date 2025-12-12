@@ -52,6 +52,11 @@ def clean_agent_data(raw_df):
     if 'City' in df.columns:
         df['City_clean'] = df['City'].str.strip().str.title()
     
+    # Remove duplicate agents (keep the row with highest TotalVolume)
+    if 'TotalVolume' in df.columns:
+        df = df.sort_values('TotalVolume', ascending=False)
+    df = df.drop_duplicates(subset=['FirstName', 'LastName', 'OfficeName'], keep='first')
+    
     return df
 
 def safe_rescale(series):
