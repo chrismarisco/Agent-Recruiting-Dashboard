@@ -278,14 +278,25 @@ def main():
     if not check_password():
         st.stop()
 
-    # --- Branding Header ---
+    # --- Branding Header with Logo ---
     st.markdown("""
     <div class="branding-header">
-        <div>
-            <h1>🏠 RealtyMetric Solutions</h1>
-            <p>Agent Recruiting Dashboard – California</p>
+        <div style="display:flex; align-items:center; gap:18px;">
+            <svg width="70" height="70" viewBox="0 0 70 70" xmlns="http://www.w3.org/2000/svg">
+                <rect width="70" height="70" rx="14" fill="white"/>
+                <text x="35" y="40" text-anchor="middle" font-family="Arial Black, Arial" font-size="28" font-weight="900" fill="#1B2A4A">RM</text>
+                <polyline points="8,58 20,48 32,53 48,38 62,28" stroke="#5CACEE" stroke-width="3.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+                <circle cx="62" cy="28" r="3.5" fill="#5CACEE"/>
+            </svg>
+            <div>
+                <h1 style="margin:0; font-size:28px; color:white;">RealtyMetric Solutions</h1>
+                <p style="margin:4px 0 0 0; color:#A8C4E0; font-size:14px;">Agent Recruiting Dashboard – California</p>
+            </div>
         </div>
-        <div class="branding-logo">RM<span>.</span></div>
+        <div style="text-align:right; color:#A8C4E0; font-size:12px;">
+            <p style="margin:0;">Version 1.1</p>
+            <p style="margin:2px 0 0 0;">© 2026 RealtyMetric Solutions</p>
+        </div>
     </div>
     """, unsafe_allow_html=True)
     
@@ -293,13 +304,106 @@ def main():
     This interactive tool helps brokerage teams identify promising real estate agents for recruitment.
     Rows with missing fields are kept and scored conservatively so you see more people.
     """)
-    
+
+    # --- About This Tool ---
+    with st.expander("📖 About This Tool"):
+        st.markdown("""
+        ### What Is This Tool?
+        RealtyMetric Solutions' Agent Recruiting Dashboard is a data-driven platform designed to help 
+        real estate brokerages identify, evaluate, and recruit top-performing agents. It analyzes publicly 
+        available agent activity data and generates an objective recruiting score for each agent, helping 
+        your team prioritize outreach efforts.
+
+        ---
+
+        ### How Does the Scoring Work?
+        Each agent is scored on a **0 to 1 scale** based on four weighted components:
+
+        | Factor | Description | What It Means |
+        |---|---|---|
+        | **Volume** | Agent's total transaction volume | Higher volume = stronger producer |
+        | **DOM (Days on Market)** | Average days properties stay listed | Lower DOM = more efficient agent |
+        | **Recency** | How recently the agent completed a transaction | More recent = more active agent |
+        | **Office Changes** | Whether the agent has switched offices | Recent switchers may be open to moving again |
+
+        ---
+
+        ### How Are Weights Used?
+        The sliders in the sidebar control how much each factor contributes to the **Final Score**. 
+        For example, if your brokerage values high volume producers, increase the Volume weight. 
+        If you prefer agents who close quickly, increase the DOM weight. The weights do **not** need 
+        to add up to 1.0 — the system will calculate the score based on whatever combination you set.
+
+        ---
+
+        ### How Should I Interpret the Scores?
+        - **0.8 – 1.0** → Highly promising recruits — prioritize outreach
+        - **0.6 – 0.8** → Strong candidates — worth investigating further
+        - **0.4 – 0.6** → Moderate candidates — consider for long-term pipeline
+        - **Below 0.4** → Lower priority at this time
+
+        ---
+
+        ### What About Missing Data?
+        Agents with missing fields are **not removed** from the results. Instead, missing values are 
+        scored conservatively (treated as the least favorable value), so these agents still appear but 
+        rank lower. This ensures you don't accidentally overlook promising agents due to incomplete records.
+        """)
+
+    # --- How to Use ---
     with st.expander("🛈 How to Use This Tool"):
         st.markdown("""
-        - Adjust weights for Volume, DOM, Recency, and Office Changes.
-        - Filters allow missing values; missing DOM/Recency are treated as worst allowed for scoring.
-        - Use the County filter (includes 'Unknown') to focus markets.
-        - Use the search bar to find specific agents by name.
+        - **Adjust Weights:** Use the sidebar sliders to set how much each factor matters to your recruiting criteria.
+        - **Filter by County:** Select one or more counties to narrow your focus to specific markets.
+        - **Set Thresholds:** Use Min Volume, Max DOM, and Max Recency to exclude agents who don't meet your minimums.
+        - **Search Agents:** Use the search bar in the sidebar to quickly find a specific agent by name.
+        - **Read the Charts:** The Top 10 chart shows your best candidates at a glance. The scatter plot shows score vs. volume.
+        - **Export Data:** Download results as CSV or Excel for further analysis or sharing with your team.
+        - **Missing Values:** Filters allow missing values — agents with missing DOM or Recency are kept but scored conservatively.
+        """)
+
+    # --- Disclaimer / Terms of Use ---
+    with st.expander("⚖️ Disclaimer & Terms of Use"):
+        st.markdown("""
+        ### Disclaimer
+        RealtyMetric Solutions provides this dashboard for **informational purposes only**. The data and 
+        scores presented are based on publicly available information and proprietary algorithms, but are 
+        not guaranteed to be accurate, complete, or up to date. RealtyMetric Solutions makes no warranties, 
+        express or implied, regarding the quality or fitness of this tool for any particular purpose.
+
+        ---
+
+        ### Terms of Use
+        By using this dashboard, you agree to the following:
+
+        1. **Confidentiality:** All data displayed in this dashboard is confidential. You may not share, 
+           distribute, or publish any information obtained from this tool without the prior written consent 
+           of RealtyMetric Solutions.
+
+        2. **No Redistribution:** You may not copy, reproduce, or distribute the content of this dashboard 
+           or any exports without authorization.
+
+        3. **Authorized Use Only:** This tool is intended solely for the authorized user or organization. 
+           Sharing login credentials or access with unauthorized parties is strictly prohibited.
+
+        4. **No Guarantee of Results:** Recruiting outcomes based on this tool are not guaranteed. 
+           RealtyMetric Solutions is not liable for any business decisions made based on the data or 
+           scores provided.
+
+        5. **Data Accuracy:** While we strive to provide accurate data, RealtyMetric Solutions is not 
+           responsible for any errors or omissions in the data. Users should independently verify 
+           information before making critical business decisions.
+
+        6. **Intellectual Property:** The scoring methodology, algorithms, and dashboard design are the 
+           intellectual property of RealtyMetric Solutions and are protected by law.
+
+        7. **Changes:** RealtyMetric Solutions reserves the right to update, modify, or discontinue 
+           this service at any time without prior notice.
+
+        ---
+
+        *By accessing this dashboard, you acknowledge and agree to these terms. For questions regarding 
+        these terms, please contact support@realtymetricsolutions.com*
         """)
     
     # Load data
