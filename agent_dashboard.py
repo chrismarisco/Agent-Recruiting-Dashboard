@@ -5,7 +5,9 @@ import plotly.express as px
 import plotly.graph_objects as go
 from datetime import datetime, date
 import re
-from io import StringIO
+from io import StringIO, BytesIO
+import openpyxl
+from openpyxl.styles import Font, PatternFill, Alignment
 
 # Configure page
 st.set_page_config(
@@ -13,6 +15,61 @@ st.set_page_config(
     page_icon="🏠",
     layout="wide"
 )
+
+#---------------------------
+# Custom Branding & Styling
+#---------------------------
+st.markdown("""
+<style>
+    .main {
+        padding-top: 10px;
+    }
+    .branding-header {
+        background: linear-gradient(135deg, #1B2A4A, #2E5090);
+        color: white;
+        padding: 20px 30px;
+        border-radius: 10px;
+        margin-bottom: 20px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+    .branding-header h1 {
+        margin: 0;
+        font-size: 28px;
+        color: white;
+    }
+    .branding-header p {
+        margin: 5px 0 0 0;
+        color: #A8C4E0;
+        font-size: 14px;
+    }
+    .branding-logo {
+        font-size: 42px;
+        font-weight: bold;
+        color: white;
+        letter-spacing: 1px;
+    }
+    .branding-logo span {
+        color: #5CACEE;
+    }
+    .footer {
+        margin-top: 40px;
+        padding: 15px 30px;
+        border-top: 1px solid #E0E0E0;
+        color: #888;
+        font-size: 12px;
+        text-align: center;
+    }
+    .stButton > button {
+        background-color: #2E5090;
+        color: white;
+    }
+    .stButton > button:hover {
+        background-color: #1B2A4A;
+    }
+</style>
+""", unsafe_allow_html=True)
 
 #---------------------------
 # Helper Functions
@@ -117,6 +174,7 @@ def load_and_prepare_data():
             agents['County'] = agents['County'].fillna('Unknown').replace('', 'Unknown')
         else:
             agents['County'] = 'Unknown'
+            city2county_full = pd.DataFrame(columns=['City_clean', 'County'])
         
         return agents, city2county_full
         
@@ -157,13 +215,78 @@ def check_password():
         return True
 
 #---------------------------
+# Excel Export
+#---------------------------
+def export_to_excel(df):
+    """Create a professionally formatted Excel export"""
+    output = BytesIO()
+    with pd.ExcelWriter(output, engine='openpyxl') as writer:
+        df.to_excel(writer, index=False, sheet_name='Ranked Agents', startrow=1)
+        ws = writer.sheets['Ranked Agents']
+
+        # Styles
+        title_font = Font(bold=True, size=14, color="FFFFFF")
+        title_fill = PatternFill(start_color="1B2A4A", end_color="1B2A4A", fill_type="solid")
+        header_font = Font(bold=True, color="FFFFFF")
+        header_fill = PatternFill(start_color="2E5090", end_color="2E5090", fill_type="solid")
+        header_align = Alignment(horizontal="center")
+        alt_row_fill = PatternFill(start_color="F0F7FF", end_color="F0F7FF", fill_type="solid")
+
+        # Title row
+        ws['A1'] = 'RealtyMetric Solutions – Agent Recruiting Report'
+        ws['A1'].font = title_font
+        ws['A1'].fill = title_fill
+        ws.merge_cells(start_row=1, start_column=1, end_row=1, end_column=len(df.columns))
+
+        # Style header row
+        for col in range(1, len(df.columns) + 1):
+            cell = ws.cell(row=2, column=col)
+            cell.font = header_font
+            cell.fill = header_fill
+            cell.alignment = header_align
+
+        # Auto-size columns
+        for col in ws.columns:
+            max_len = max(len(str(cell.value or "")) for cell in col)
+            ws.column_dimensions[col[0].column_letter].width = min(max_len + 4, 30)
+
+        # Format currency column
+        if 'TotalVolume' in df.columns:
+            tv_col = list(df.columns).index('TotalVolume') + 1
+            for row in range(3, len(df) + 3):
+                ws.cell(row=row, column=tv_col).number_format = '$#,##0'
+
+        # Format score column
+        if 'Final_Score' in df.columns:
+            sc_col = list(df.columns).index('Final_Score') + 1
+            for row in range(3, len(df) + 3):
+                ws.cell(row=row, column=sc_col).number_format = '0.0000'
+
+        # Alternate row colors
+        for row in range(3, len(df) + 3, 2):
+            for col in range(1, len(df.columns) + 1):
+                ws.cell(row=row, column=col).fill = alt_row_fill
+
+    output.seek(0)
+    return output
+
+#---------------------------
 # Main Application
 #---------------------------
 def main():
     if not check_password():
         st.stop()
-    
-    st.title("🏠 RealtyMetric Solutions – Agent Recruiting Dashboard")
+
+    # --- Branding Header ---
+    st.markdown("""
+    <div class="branding-header">
+        <div>
+            <h1>🏠 RealtyMetric Solutions</h1>
+            <p>Agent Recruiting Dashboard – California</p>
+        </div>
+        <div class="branding-logo">RM<span>.</span></div>
+    </div>
+    """, unsafe_allow_html=True)
     
     st.markdown("""
     This interactive tool helps brokerage teams identify promising real estate agents for recruitment.
@@ -175,6 +298,7 @@ def main():
         - Adjust weights for Volume, DOM, Recency, and Office Changes.
         - Filters allow missing values; missing DOM/Recency are treated as worst allowed for scoring.
         - Use the County filter (includes 'Unknown') to focus markets.
+        - Use the search bar to find specific agents by name.
         """)
     
     # Load data
@@ -185,7 +309,7 @@ def main():
     
     # Sidebar controls
     with st.sidebar:
-        st.header("Scoring Weights")
+        st.header("⚖️ Scoring Weights")
         volume_weight = st.slider("Weight: Volume", 0.0, 1.0, 0.30, 0.05)
         dom_weight = st.slider("Weight: DOM (Lower is Better)", 0.0, 1.0, 0.35, 0.05)
         recency_weight = st.slider("Weight: Recency (Recent Better)", 0.0, 1.0, 0.20, 0.05)
@@ -193,7 +317,7 @@ def main():
         
         st.divider()
         
-        st.header("Filters")
+        st.header("🔍 Filters")
         st.caption("Rows with missing fields are kept")
         
         # County filter
@@ -226,8 +350,12 @@ def main():
             value=999,
             step=50
         )
-        
-        rescore_button = st.button("🔄 Rescore & Filter Agents", type="primary")
+
+        st.divider()
+
+        # Agent Search
+        st.header("🔎 Agent Search")
+        search_query = st.text_input("Search by agent name...", placeholder="e.g. John Smith")
     
     # Process data (runs automatically in Streamlit)
     def process_agents():
@@ -284,14 +412,46 @@ def main():
                        'TotalVolume', 'DaysOnMarket', 'RecencyDays', 'Final_Score']
         display_cols = [col for col in display_cols if col in df_final.columns]
         df_display = df_final[display_cols].copy()
+
+        # Agent search filter
+        if search_query.strip():
+            q = search_query.strip().lower()
+            mask = (
+                df_display['FirstName'].str.lower().str.contains(q, na=False) |
+                df_display['LastName'].str.lower().str.contains(q, na=False) |
+                (df_display['FirstName'].str.lower() + ' ' + df_display['LastName'].str.lower()).str.contains(q, na=False)
+            )
+            df_display = df_display[mask].reset_index(drop=True)
+            df_display['Rank'] = df_display.index + 1
         
         return df_display, df_final, total_rows, len(df1), len(df2)
     
     # Process the data
     df_display, df_full, total_rows, after_county, after_filters = process_agents()
+
+    # --- Summary Stats Cards ---
+    st.subheader("📊 Summary Overview")
+    c1, c2, c3, c4, c5 = st.columns(5)
+    with c1:
+        st.metric("Total Agents", f"{total_rows:,}")
+    with c2:
+        st.metric("After Filters", f"{len(df_display):,}")
+    with c3:
+        avg_vol = df_display['TotalVolume'].mean() if 'TotalVolume' in df_display.columns else 0
+        st.metric("Avg Volume", f"${avg_vol:,.0f}" if not pd.isna(avg_vol) else "—")
+    with c4:
+        med_dom = df_display['DaysOnMarket'].median() if 'DaysOnMarket' in df_display.columns else 0
+        st.metric("Median DOM", f"{int(med_dom)}" if not pd.isna(med_dom) else "—")
+    with c5:
+        top_score = df_display['Final_Score'].max() if not df_display.empty else 0
+        st.metric("Top Score", f"{top_score:.4f}" if not pd.isna(top_score) else "—")
+    
+    if len(df_display) == 0:
+        st.warning("No agents match the current filters.")
+        return
     
     # Row audit
-    st.subheader("Row Audit")
+    st.subheader("🔍 Row Audit")
     col1, col2, col3, col4 = st.columns(4)
     with col1:
         st.metric("Rows in CSV", f"{total_rows:,}")
@@ -301,13 +461,38 @@ def main():
         st.metric("After Thresholds", f"{after_filters:,}")
     with col4:
         st.metric("Rows Shown", f"{len(df_display):,}")
-    
-    if len(df_display) == 0:
-        st.warning("No agents match the current filters.")
-        return
+
+    # --- Top 10 Bar Chart ---
+    st.subheader("🏆 Top 10 Agents by Recruiting Score")
+    top10 = df_display.head(10).copy()
+    top10['Agent Name'] = top10['FirstName'] + ' ' + top10['LastName']
+    fig_bar = px.bar(
+        top10,
+        x='Final_Score',
+        y='Agent Name',
+        orientation='h',
+        color='Final_Score',
+        color_continuous_scale='Blues',
+        text='Final_Score',
+        hover_data={
+            'OfficeName': True,
+            'County': True,
+            'TotalVolume': ':$,.0f',
+            'Final_Score': ':.4f'
+        }
+    )
+    fig_bar.update_layout(
+        yaxis=dict(categoryorder='total ascending', title=None),
+        xaxis_title="Recruiting Score",
+        height=420,
+        showlegend=False,
+        coloraxis_showscale=False
+    )
+    fig_bar.update_traces(texttemplate='%{text:.4f}', textposition='inside')
+    st.plotly_chart(fig_bar, use_container_width=True)
     
     # Scatter plot
-    st.subheader("Score vs. Total Volume")
+    st.subheader("📈 Score vs. Total Volume")
     
     if 'TotalVolume' in df_full.columns:
         fig = px.scatter(
@@ -339,7 +524,7 @@ def main():
         st.plotly_chart(fig, use_container_width=True)
     
     # Agent table
-    st.subheader("Ranked Agent Table")
+    st.subheader("📋 Ranked Agent Table")
     
     # Format the display dataframe
     df_formatted = df_display.copy()
@@ -370,18 +555,36 @@ def main():
         }
     )
     
-    # Download button
-    if st.button("📥 Download CSV"):
+    # --- Export Buttons ---
+    st.subheader("📥 Export Data")
+    col_csv, col_xlsx = st.columns(2)
+
+    with col_csv:
         csv_buffer = StringIO()
         df_display.to_csv(csv_buffer, index=False)
-        csv_data = csv_buffer.getvalue()
-        
         st.download_button(
-            label="Download agent scores CSV",
-            data=csv_data,
-            file_name=f"agent_scores_{date.today().strftime('%Y-%m-%d')}.csv",
+            label="📄 Download CSV",
+            data=csv_buffer.getvalue(),
+            file_name=f"RealtyMetric_CA_Agents_{date.today().strftime('%Y-%m-%d')}.csv",
             mime="text/csv"
         )
+
+    with col_xlsx:
+        xlsx_buffer = export_to_excel(df_display)
+        st.download_button(
+            label="📊 Download Excel",
+            data=xlsx_buffer,
+            file_name=f"RealtyMetric_CA_Agents_{date.today().strftime('%Y-%m-%d')}.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
+
+    # --- Footer ---
+    st.markdown("""
+    <div class="footer">
+        <p>© 2026 RealtyMetric Solutions | Agent Recruiting Dashboard | Confidential</p>
+        <p>For support, contact: support@realtymetricsolutions.com | Version 1.1</p>
+    </div>
+    """, unsafe_allow_html=True)
 
 if __name__ == "__main__":
     main()
