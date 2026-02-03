@@ -246,9 +246,10 @@ def export_to_excel(df):
             cell.alignment = header_align
 
         # Auto-size columns
-        for col in ws.columns:
-            max_len = max(len(str(cell.value or "")) for cell in col)
-            ws.column_dimensions[col[0].column_letter].width = min(max_len + 4, 30)
+        for i, col_name in enumerate(df.columns, 1):
+            max_len = max(len(str(col_name)), df[col_name].astype(str).str.len().max() or 0)
+            col_letter = openpyxl.utils.get_column_letter(i + 0)
+            ws.column_dimensions[col_letter].width = min(max_len + 4, 30)
 
         # Format currency column
         if 'TotalVolume' in df.columns:
