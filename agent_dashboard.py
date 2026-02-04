@@ -164,22 +164,29 @@ def load_and_prepare_data():
 #---------------------------
 def check_password():
     """Returns `True` if the user had the correct password."""
-    def password_entered():
-        if "password" in st.session_state and st.session_state["password"] == st.secrets["password"]:
-            st.session_state["password_correct"] = True
-            del st.session_state["password"]
-        else:
-            st.session_state["password_correct"] = False
-
+    
+    # Initialize password_correct in session state if not present
     if "password_correct" not in st.session_state:
-        st.text_input("Password", type="password", on_change=password_entered, key="password")
-        st.write("*Please contact your administrator for access.*")
-        return False
-    elif not st.session_state["password_correct"]:
-        st.text_input("Password", type="password", on_change=password_entered, key="password")
-        st.error("😕 Password incorrect")
-        return False
-    return True
+        st.session_state["password_correct"] = False
+    
+    # If already authenticated, stay authenticated
+    if st.session_state["password_correct"]:
+        return True
+    
+    # Show password input
+    password_input = st.text_input("Password", type="password", key="password_input")
+    st.write("*Please contact your administrator for access.*")
+    
+    # Check password when user enters it
+    if password_input:
+        if password_input == st.secrets["password"]:
+            st.session_state["password_correct"] = True
+            st.rerun()
+        else:
+            st.error("😕 Password incorrect")
+            return False
+    
+    return False
 
 #---------------------------
 # Excel Export
