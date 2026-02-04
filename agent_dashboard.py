@@ -123,7 +123,6 @@ def has_county_data(df):
     """Check if real county data exists (not all Unknown)"""
     counties = df['County'].dropna().unique()
     return not (len(counties) == 0 or (len(counties) == 1 and counties[0] == 'Unknown'))
-
 @st.cache_data
 def load_and_prepare_data():
     """Load and prepare all data"""
