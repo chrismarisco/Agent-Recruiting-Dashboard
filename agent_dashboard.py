@@ -516,35 +516,22 @@ def main():
             fig_vol.update_traces(texttemplate='$%{x:,.0f}', textposition='inside')
             st.plotly_chart(fig_vol, use_container_width=True)
 
-    # --- Scatter Plot (colored by County if available, otherwise by Score) ---
+    # --- Scatter Plot (colored by Score) ---
     st.subheader("📈 Score vs. Total Volume")
     if 'TotalVolume' in df_display.columns:
         scatter_df = df_display.dropna(subset=['TotalVolume']).copy()
 
-        if show_counties:
-            fig_scatter = px.scatter(
-                scatter_df, x='TotalVolume', y='Final_Score', color='County',
-                color_discrete_sequence=px.colors.qualitative.Set2,
-                hover_data={
-                    'Rank': True, 'FirstName': True, 'LastName': True,
-                    'County': True, 'OfficeName': True,
-                    'TotalVolume': ':$,.0f', 'DaysOnMarket': ':.0f',
-                    'RecencyDays': ':.0f', 'Final_Score': ':.3f'
-                },
-                title="Recruiting Score vs Total Volume"
-            )
-        else:
-            fig_scatter = px.scatter(
-                scatter_df, x='TotalVolume', y='Final_Score', color='Final_Score',
-                color_continuous_scale='Viridis',
-                hover_data={
-                    'Rank': True, 'FirstName': True, 'LastName': True,
-                    'County': True, 'OfficeName': True,
-                    'TotalVolume': ':$,.0f', 'DaysOnMarket': ':.0f',
-                    'RecencyDays': ':.0f', 'Final_Score': ':.3f'
-                },
-                title="Recruiting Score vs Total Volume"
-            )
+        fig_scatter = px.scatter(
+            scatter_df, x='TotalVolume', y='Final_Score', color='Final_Score',
+            color_continuous_scale='Viridis',
+            hover_data={
+                'Rank': True, 'FirstName': True, 'LastName': True,
+                'County': True, 'OfficeName': True,
+                'TotalVolume': ':$,.0f', 'DaysOnMarket': ':.0f',
+                'RecencyDays': ':.0f', 'Final_Score': ':.3f'
+            },
+            title="Recruiting Score vs Total Volume"
+        )
 
         fig_scatter.update_layout(
             xaxis_title="Total Volume ($)", yaxis_title="Recruiting Score",
@@ -585,8 +572,9 @@ def main():
         )
         fig_office.update_layout(
             height=520, xaxis_title="Average Recruiting Score",
-            yaxis_title=None, coloraxis_title="# Agents",
-            yaxis=dict(categoryorder='total ascending')
+            yaxis_title=None,
+            yaxis=dict(categoryorder='total ascending'),
+            coloraxis_colorbar=dict(title="# Agents")
         )
         fig_office.update_traces(texttemplate='%{text} agents', textposition='outside')
         st.plotly_chart(fig_office, use_container_width=True)
