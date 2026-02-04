@@ -860,35 +860,26 @@ def main():
     with st.expander("⚙️ Customize Export Columns"):
         st.caption("Select which columns to include in your export")
         available_cols = df_display.columns.tolist()
-        
-        # Default selections
         default_cols = ['Rank', 'FirstName', 'LastName', 'OfficeName', 'County', 'TotalVolume', 'Final_Score']
         default_cols = [c for c in default_cols if c in available_cols]
-        
         selected_cols = st.multiselect(
             "Columns to export:",
             options=available_cols,
             default=default_cols,
             help="Choose which columns to include in your exported reports"
         )
-        
         if not selected_cols:
             st.warning("Please select at least one column to export")
             selected_cols = default_cols
     
-    # Create export dataframe with selected columns
     export_df = df_display[selected_cols].copy()
-    
-    # Generate timestamp for filenames
     timestamp = datetime.now().strftime('%Y-%m-%d_%H%M')
     
-    # Export buttons in columns
+    # Export buttons
     col1, col2, col3 = st.columns(3)
     
     with col1:
         st.markdown("**Standard Exports**")
-        
-        # CSV Export
         csv_buffer = StringIO()
         export_df.to_csv(csv_buffer, index=False)
         st.download_button(
@@ -899,7 +890,6 @@ def main():
             use_container_width=True
         )
         
-        # Excel Export
         xlsx_buffer = export_to_excel(export_df)
         st.download_button(
             label="📊 Download Excel",
@@ -909,63 +899,38 @@ def main():
             use_container_width=True
         )
         
-        # PDF Export
-        try:
-            pdf_buffer = export_to_pdf(export_df)
-            st.download_button(
-                label="📑 Download PDF",
-                data=pdf_buffer,
-                file_name=f"RealtyMetric_CA_Agents_{timestamp}.pdf",
-                mime="application/pdf",
-                use_container_width=True
-            )
-        except Exception as e:
-            st.error(f"PDF generation error: {str(e)}")
+        pdf_buffer = export_to_pdf(export_df)
+        st.download_button(
+            label="📑 Download PDF",
+            data=pdf_buffer,
+            file_name=f"RealtyMetric_CA_Agents_{timestamp}.pdf",
+            mime="application/pdf",
+            use_container_width=True
+        )
     
     with col2:
         st.markdown("**Executive Summary**")
-        st.caption("Top 20 agents with charts")
+        st.caption("Top 20 agents")
         
-        # Executive Summary Excel
         exec_excel = export_to_excel(export_df, include_summary=True, top_n=20)
         st.download_button(
-            label="📊 Executive Summary (Excel)",
+            label="📊 Summary (Excel)",
             data=exec_excel,
-            file_name=f"RealtyMetric_Executive_Summary_{timestamp}.xlsx",
+            file_name=f"RealtyMetric_Executive_{timestamp}.xlsx",
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             use_container_width=True
         )
         
-        # Executive Summary PDF (with charts)
-        try:
-            # Generate chart images for PDF
-            charts_data = {}
-            
-            # Top 10 chart
-            if len(export_df) >= 10:
-                top10_df = export_df.head(10).copy()
-                if 'FirstName' in top10_df.columns and 'LastName' in top10_df.columns:
-                    top10_df['Agent Name'] = top10_df['FirstName'] + ' ' + top10_df['LastName']
-                    fig_top10 = px.bar(
-                        top10_df, x='Final_Score', y='Agent Name', orientation='h',
-                        title="Top 10 Agents", color='Final_Score', color_continuous_scale='Blues'
-                    )
-                    fig_top10.update_layout(showlegend=False, height=400)
-                    charts_data['top10'] = BytesIO(fig_top10.to_image(format="png"))
-            
-            exec_pdf = export_to_pdf(export_df, charts_data=charts_data, top_n=20)
-            st.download_button(
-                label="📑 Executive Summary (PDF)",
-                data=exec_pdf,
-                file_name=f"RealtyMetric_Executive_Summary_{timestamp}.pdf",
-                mime="application/pdf",
-                use_container_width=True
-            )
-        except Exception as e:
-            st.error(f"PDF generation error: {str(e)}")
+        exec_pdf = export_to_pdf(export_df, charts_data=None, top_n=20)
+        st.download_button(
+            label="📑 Summary (PDF)",
+            data=exec_pdf,
+            file_name=f"RealtyMetric_Executive_{timestamp}.pdf",
+            mime="application/pdf",
+            use_container_width=True
+        )
     
     with col3:
-        # Check user tier
         user_tier = st.secrets.get("tier", "starter")
         
         if user_tier in ["professional", "enterprise"]:
@@ -974,14 +939,12 @@ def main():
             
             recipient_email = st.text_input(
                 "Recipient email:",
-                placeholder="client@example.com",
-                key="email_recipient"
+                placeholder="client@example.com"
             )
             
             report_type = st.radio(
                 "Report type:",
-                ["Standard Excel", "Executive Summary"],
-                key="email_report_type"
+                ["Standard Excel", "Executive Summary"]
             )
             
             if st.button("📧 Send Email", use_container_width=True):
@@ -989,13 +952,12 @@ def main():
                     st.error("Please enter a valid email address")
                 else:
                     with st.spinner("Sending email..."):
-                        # Prepare attachment
                         if report_type == "Standard Excel":
                             attachment = export_to_excel(export_df).read()
-                            filename = f"RealtyMetric_CA_Agents_{timestamp}.xlsx"
+                            filename = f"RealtyMetric_CA_{timestamp}.xlsx"
                         else:
                             attachment = export_to_excel(export_df, include_summary=True, top_n=20).read()
-                            filename = f"RealtyMetric_Executive_Summary_{timestamp}.xlsx"
+                            filename = f"RealtyMetric_Executive_{timestamp}.xlsx"
                         
                         success, message = send_email_report(recipient_email, attachment, filename)
                         
@@ -1006,10 +968,7 @@ def main():
         else:
             st.markdown("**📧 Email Reports** 🔒")
             st.caption("Upgrade to Professional")
-            st.info("Email reporting is available in Professional and Enterprise tiers. Contact sales@realtymetricsolutions.com to upgrade.")
-            
-            if st.button("💎 Upgrade Now", use_container_width=True):
-                st.markdown("[Contact Sales](mailto:sales@realtymetricsolutions.com?subject=Upgrade%20Request)")
+            st.info("Email reporting is available in Professional tier. Contact sales@realtymetricsolutions.com")
     
     st.divider()
 
