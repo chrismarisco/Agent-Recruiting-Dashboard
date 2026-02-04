@@ -789,7 +789,7 @@ def main():
         else:
             st.markdown("**📧 Email Reports** 🔒")
             st.caption("Upgrade to Professional")
-            st.info("Email reporting is available in Professional tier. Contact sales@realtymetricsolutions.com")
+            st.info("Email reporting is available in Professional tier. Contact realtymetric@gmail.com")
     
     st.divider()
 
