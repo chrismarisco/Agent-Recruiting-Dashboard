@@ -540,47 +540,6 @@ def main():
         fig_scatter.update_traces(marker=dict(size=9))
         st.plotly_chart(fig_scatter, use_container_width=True)
 
-    # --- Office Performance Comparison ---
-    st.subheader("🏢 Office Performance Comparison")
-    office_df = df_display.dropna(subset=['OfficeName']).copy()
-    office_df = office_df[office_df['OfficeName'].str.strip() != '']
-
-    if len(office_df) > 0:
-        office_stats = office_df.groupby('OfficeName').agg(
-            Agent_Count=('FirstName', 'count'),
-            Avg_Score=('Final_Score', 'mean'),
-            Total_Volume=('TotalVolume', 'sum'),
-            Avg_Volume=('TotalVolume', 'mean')
-        ).reset_index()
-        office_stats = office_stats.sort_values('Avg_Score', ascending=False).head(15)
-        # Truncate long office names for readability
-        office_stats['Display_Name'] = office_stats['OfficeName'].str[:45]
-
-        fig_office = px.bar(
-            office_stats, x='Avg_Score', y='Display_Name', orientation='h',
-            color='Agent_Count', color_continuous_scale='Viridis',
-            hover_data={
-                'OfficeName': True,
-                'Total_Volume': ':$,.0f',
-                'Avg_Volume': ':$,.0f',
-                'Agent_Count': True,
-                'Avg_Score': ':.4f',
-                'Display_Name': False
-            },
-            text='Agent_Count',
-            title="Top 15 Offices by Average Recruiting Score"
-        )
-        fig_office.update_layout(
-            height=520, xaxis_title="Average Recruiting Score",
-            yaxis_title=None,
-            yaxis=dict(categoryorder='total ascending'),
-            coloraxis_colorbar=dict(title="# Agents")
-        )
-        fig_office.update_traces(texttemplate='%{text} agents', textposition='outside')
-        st.plotly_chart(fig_office, use_container_width=True)
-    else:
-        st.info("No office data available to display.")
-
     # --- Ranked Agent Table ---
     st.subheader("📋 Ranked Agent Table")
     df_formatted = df_display.copy()
