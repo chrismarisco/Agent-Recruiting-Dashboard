@@ -8,6 +8,17 @@ import re
 from io import StringIO, BytesIO
 import openpyxl
 from openpyxl.styles import Font, PatternFill, Alignment
+from reportlab.lib import colors
+from reportlab.lib.pagesizes import letter, A4
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, Image, PageBreak
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.lib.units import inch
+from reportlab.lib.enums import TA_CENTER, TA_LEFT
+import smtplib
+from email.mime.multipart import MIMEMultipart
+from email.mime.base import MIMEBase
+from email.mime.text import MIMEText
+from email import encoders
 
 # Configure page
 st.set_page_config(
@@ -173,52 +184,226 @@ def check_password():
 #---------------------------
 # Excel Export
 #---------------------------
-def export_to_excel(df):
+def export_to_excel(df, include_summary=False, top_n=None):
     """Create a professionally formatted Excel export"""
     output = BytesIO()
+    
+    # If top_n specified, limit to top N agents
+    if top_n:
+        df = df.head(top_n)
+    
     with pd.ExcelWriter(output, engine='openpyxl') as writer:
-        df.to_excel(writer, index=False, sheet_name='Ranked Agents', startrow=1)
+        df.to_excel(writer, index=False, sheet_name='Ranked Agents', startrow=2 if include_summary else 1)
         ws = writer.sheets['Ranked Agents']
-        title_font = Font(bold=True, size=14, color="FFFFFF")
+        
+        # Styles
+        title_font = Font(bold=True, size=16, color="FFFFFF")
         title_fill = PatternFill(start_color="1B2A4A", end_color="1B2A4A", fill_type="solid")
-        header_font = Font(bold=True, color="FFFFFF")
+        subtitle_font = Font(size=11, color="666666", italic=True)
+        header_font = Font(bold=True, color="FFFFFF", size=12)
         header_fill = PatternFill(start_color="2E5090", end_color="2E5090", fill_type="solid")
-        header_align = Alignment(horizontal="center")
+        header_align = Alignment(horizontal="center", vertical="center")
         alt_row_fill = PatternFill(start_color="F0F7FF", end_color="F0F7FF", fill_type="solid")
-
+        
+        # Title row
         ws['A1'] = 'RealtyMetric Solutions – Agent Recruiting Report'
         ws['A1'].font = title_font
         ws['A1'].fill = title_fill
+        ws['A1'].alignment = Alignment(horizontal="left", vertical="center")
         ws.merge_cells(start_row=1, start_column=1, end_row=1, end_column=len(df.columns))
-
+        ws.row_dimensions[1].height = 30
+        
+        # Summary row if requested
+        start_row = 3 if include_summary else 2
+        if include_summary:
+            ws['A2'] = f'Executive Summary - Top {top_n if top_n else len(df)} Recruiting Targets | Generated: {datetime.now().strftime("%B %d, %Y at %I:%M %p")}'
+            ws['A2'].font = subtitle_font
+            ws.merge_cells(start_row=2, start_column=1, end_row=2, end_column=len(df.columns))
+            ws.row_dimensions[2].height = 20
+        
+        # Style header row
         for col in range(1, len(df.columns) + 1):
-            cell = ws.cell(row=2, column=col)
+            cell = ws.cell(row=start_row, column=col)
             cell.font = header_font
             cell.fill = header_fill
             cell.alignment = header_align
-
+        ws.row_dimensions[start_row].height = 25
+        
         # Auto-size columns
         for i, col_name in enumerate(df.columns, 1):
             max_len = max(len(str(col_name)), df[col_name].astype(str).str.len().max() or 0)
             col_letter = openpyxl.utils.get_column_letter(i)
             ws.column_dimensions[col_letter].width = min(max_len + 4, 30)
-
+        
+        # Format currency column
         if 'TotalVolume' in df.columns:
             tv_col = list(df.columns).index('TotalVolume') + 1
-            for row in range(3, len(df) + 3):
+            for row in range(start_row + 1, len(df) + start_row + 1):
                 ws.cell(row=row, column=tv_col).number_format = '$#,##0'
-
+        
+        # Format score column
         if 'Final_Score' in df.columns:
             sc_col = list(df.columns).index('Final_Score') + 1
-            for row in range(3, len(df) + 3):
+            for row in range(start_row + 1, len(df) + start_row + 1):
                 ws.cell(row=row, column=sc_col).number_format = '0.0000'
-
-        for row in range(3, len(df) + 3, 2):
+        
+        # Alternate row colors
+        for row in range(start_row + 1, len(df) + start_row + 1, 2):
             for col in range(1, len(df.columns) + 1):
                 ws.cell(row=row, column=col).fill = alt_row_fill
-
+    
     output.seek(0)
     return output
+
+#---------------------------
+# PDF Export
+#---------------------------
+def export_to_pdf(df, charts_data=None, top_n=None):
+    """Create a professionally formatted PDF export with charts"""
+    output = BytesIO()
+    
+    # If top_n specified, limit to top N agents
+    if top_n:
+        df = df.head(top_n)
+    
+    doc = SimpleDocTemplate(output, pagesize=letter, topMargin=0.5*inch, bottomMargin=0.5*inch)
+    elements = []
+    styles = getSampleStyleSheet()
+    
+    # Custom styles
+    title_style = ParagraphStyle(
+        'CustomTitle',
+        parent=styles['Heading1'],
+        fontSize=20,
+        textColor=colors.HexColor('#1B2A4A'),
+        spaceAfter=12,
+        alignment=TA_CENTER
+    )
+    
+    subtitle_style = ParagraphStyle(
+        'CustomSubtitle',
+        parent=styles['Normal'],
+        fontSize=11,
+        textColor=colors.HexColor('#666666'),
+        spaceAfter=20,
+        alignment=TA_CENTER,
+        fontName='Helvetica-Oblique'
+    )
+    
+    # Title
+    title = Paragraph("RealtyMetric Solutions", title_style)
+    subtitle = Paragraph(f"Agent Recruiting Report - Generated {datetime.now().strftime('%B %d, %Y')}", subtitle_style)
+    elements.append(title)
+    elements.append(subtitle)
+    
+    # Summary if top N
+    if top_n:
+        summary_text = f"<b>Executive Summary:</b> Top {top_n} recruiting targets based on weighted scoring algorithm"
+        summary = Paragraph(summary_text, styles['Normal'])
+        elements.append(summary)
+        elements.append(Spacer(1, 0.2*inch))
+    
+    # Add charts if provided
+    if charts_data:
+        for chart_name, chart_bytes in charts_data.items():
+            try:
+                img = Image(chart_bytes, width=6.5*inch, height=3.5*inch)
+                elements.append(img)
+                elements.append(Spacer(1, 0.2*inch))
+            except:
+                pass
+    
+    # Table data
+    table_data = [df.columns.tolist()] + df.values.tolist()
+    
+    # Create table
+    col_widths = [0.4*inch, 0.9*inch, 0.9*inch, 1.4*inch, 0.9*inch, 1*inch, 0.8*inch, 0.9*inch, 0.8*inch]
+    
+    t = Table(table_data, colWidths=col_widths, repeatRows=1)
+    t.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#2E5090')),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('FONTSIZE', (0, 0), (-1, 0), 9),
+        ('BOTTOMPADDING', (0, 0), (-1, 0), 8),
+        ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+        ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+        ('FONTSIZE', (0, 1), (-1, -1), 7),
+        ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#F0F7FF')]),
+    ]))
+    
+    elements.append(t)
+    
+    # Footer
+    elements.append(Spacer(1, 0.3*inch))
+    footer = Paragraph(
+        "<i>© 2026 RealtyMetric Solutions | Confidential | support@realtymetricsolutions.com</i>",
+        styles['Normal']
+    )
+    elements.append(footer)
+    
+    doc.build(elements)
+    output.seek(0)
+    return output
+
+#---------------------------
+# Email Report Function
+#---------------------------
+def send_email_report(recipient_email, attachment_data, attachment_filename, attachment_type="excel"):
+    """Send report via email (requires email configuration in secrets)"""
+    try:
+        # Get email config from secrets
+        smtp_server = st.secrets.get("smtp_server", "smtp.gmail.com")
+        smtp_port = st.secrets.get("smtp_port", 587)
+        sender_email = st.secrets.get("sender_email", "")
+        sender_password = st.secrets.get("sender_password", "")
+        
+        if not sender_email or not sender_password:
+            return False, "Email configuration not found. Please contact support."
+        
+        # Create message
+        msg = MIMEMultipart()
+        msg['From'] = sender_email
+        msg['To'] = recipient_email
+        msg['Subject'] = f"RealtyMetric Solutions - Agent Recruiting Report - {date.today().strftime('%B %d, %Y')}"
+        
+        body = f"""
+Dear Valued Client,
+
+Please find attached your RealtyMetric Solutions Agent Recruiting Report generated on {datetime.now().strftime('%B %d, %Y at %I:%M %p')}.
+
+This report contains your customized agent rankings based on your specified criteria.
+
+If you have any questions or need assistance, please don't hesitate to contact us at support@realtymetricsolutions.com.
+
+Best regards,
+The RealtyMetric Solutions Team
+
+---
+© 2026 RealtyMetric Solutions | Confidential
+"""
+        
+        msg.attach(MIMEText(body, 'plain'))
+        
+        # Attach file
+        part = MIMEBase('application', 'octet-stream')
+        part.set_payload(attachment_data)
+        encoders.encode_base64(part)
+        part.add_header('Content-Disposition', f'attachment; filename={attachment_filename}')
+        msg.attach(part)
+        
+        # Send email
+        server = smtplib.SMTP(smtp_server, smtp_port)
+        server.starttls()
+        server.login(sender_email, sender_password)
+        server.send_message(msg)
+        server.quit()
+        
+        return True, "Email sent successfully!"
+        
+    except Exception as e:
+        return False, f"Error sending email: {str(e)}"
 
 #---------------------------
 # Main Application
@@ -243,7 +428,7 @@ def main():
             </div>
         </div>
         <div style="text-align:right; color:#A8C4E0; font-size:12px;">
-            <p style="margin:0;">Version 1.3</p>
+            <p style="margin:0;">Version 1.4</p>
             <p style="margin:2px 0 0 0;">© 2026 RealtyMetric Solutions</p>
         </div>
     </div>
@@ -668,29 +853,170 @@ def main():
     )
 
     # --- Export Buttons ---
-    st.subheader("📥 Export Data")
-    col_csv, col_xlsx = st.columns(2)
-    with col_csv:
+    st.subheader("📥 Export & Reporting")
+    
+    # Column selector
+    with st.expander("⚙️ Customize Export Columns"):
+        st.caption("Select which columns to include in your export")
+        available_cols = df_display.columns.tolist()
+        
+        # Default selections
+        default_cols = ['Rank', 'FirstName', 'LastName', 'OfficeName', 'County', 'TotalVolume', 'Final_Score']
+        default_cols = [c for c in default_cols if c in available_cols]
+        
+        selected_cols = st.multiselect(
+            "Columns to export:",
+            options=available_cols,
+            default=default_cols,
+            help="Choose which columns to include in your exported reports"
+        )
+        
+        if not selected_cols:
+            st.warning("Please select at least one column to export")
+            selected_cols = default_cols
+    
+    # Create export dataframe with selected columns
+    export_df = df_display[selected_cols].copy()
+    
+    # Generate timestamp for filenames
+    timestamp = datetime.now().strftime('%Y-%m-%d_%H%M')
+    
+    # Export buttons in columns
+    col1, col2, col3 = st.columns(3)
+    
+    with col1:
+        st.markdown("**Standard Exports**")
+        
+        # CSV Export
         csv_buffer = StringIO()
-        df_display.to_csv(csv_buffer, index=False)
+        export_df.to_csv(csv_buffer, index=False)
         st.download_button(
-            label="📄 Download CSV", data=csv_buffer.getvalue(),
-            file_name=f"RealtyMetric_CA_Agents_{date.today().strftime('%Y-%m-%d')}.csv",
-            mime="text/csv"
+            label="📄 Download CSV",
+            data=csv_buffer.getvalue(),
+            file_name=f"RealtyMetric_CA_Agents_{timestamp}.csv",
+            mime="text/csv",
+            use_container_width=True
         )
-    with col_xlsx:
-        xlsx_buffer = export_to_excel(df_display)
+        
+        # Excel Export
+        xlsx_buffer = export_to_excel(export_df)
         st.download_button(
-            label="📊 Download Excel", data=xlsx_buffer,
-            file_name=f"RealtyMetric_CA_Agents_{date.today().strftime('%Y-%m-%d')}.xlsx",
-            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            label="📊 Download Excel",
+            data=xlsx_buffer,
+            file_name=f"RealtyMetric_CA_Agents_{timestamp}.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            use_container_width=True
         )
+        
+        # PDF Export
+        try:
+            pdf_buffer = export_to_pdf(export_df)
+            st.download_button(
+                label="📑 Download PDF",
+                data=pdf_buffer,
+                file_name=f"RealtyMetric_CA_Agents_{timestamp}.pdf",
+                mime="application/pdf",
+                use_container_width=True
+            )
+        except Exception as e:
+            st.error(f"PDF generation error: {str(e)}")
+    
+    with col2:
+        st.markdown("**Executive Summary**")
+        st.caption("Top 20 agents with charts")
+        
+        # Executive Summary Excel
+        exec_excel = export_to_excel(export_df, include_summary=True, top_n=20)
+        st.download_button(
+            label="📊 Executive Summary (Excel)",
+            data=exec_excel,
+            file_name=f"RealtyMetric_Executive_Summary_{timestamp}.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            use_container_width=True
+        )
+        
+        # Executive Summary PDF (with charts)
+        try:
+            # Generate chart images for PDF
+            charts_data = {}
+            
+            # Top 10 chart
+            if len(export_df) >= 10:
+                top10_df = export_df.head(10).copy()
+                if 'FirstName' in top10_df.columns and 'LastName' in top10_df.columns:
+                    top10_df['Agent Name'] = top10_df['FirstName'] + ' ' + top10_df['LastName']
+                    fig_top10 = px.bar(
+                        top10_df, x='Final_Score', y='Agent Name', orientation='h',
+                        title="Top 10 Agents", color='Final_Score', color_continuous_scale='Blues'
+                    )
+                    fig_top10.update_layout(showlegend=False, height=400)
+                    charts_data['top10'] = BytesIO(fig_top10.to_image(format="png"))
+            
+            exec_pdf = export_to_pdf(export_df, charts_data=charts_data, top_n=20)
+            st.download_button(
+                label="📑 Executive Summary (PDF)",
+                data=exec_pdf,
+                file_name=f"RealtyMetric_Executive_Summary_{timestamp}.pdf",
+                mime="application/pdf",
+                use_container_width=True
+            )
+        except Exception as e:
+            st.error(f"PDF generation error: {str(e)}")
+    
+    with col3:
+        # Check user tier
+        user_tier = st.secrets.get("tier", "starter")
+        
+        if user_tier in ["professional", "enterprise"]:
+            st.markdown("**📧 Email Report** 🌟")
+            st.caption("Professional feature")
+            
+            recipient_email = st.text_input(
+                "Recipient email:",
+                placeholder="client@example.com",
+                key="email_recipient"
+            )
+            
+            report_type = st.radio(
+                "Report type:",
+                ["Standard Excel", "Executive Summary"],
+                key="email_report_type"
+            )
+            
+            if st.button("📧 Send Email", use_container_width=True):
+                if not recipient_email or '@' not in recipient_email:
+                    st.error("Please enter a valid email address")
+                else:
+                    with st.spinner("Sending email..."):
+                        # Prepare attachment
+                        if report_type == "Standard Excel":
+                            attachment = export_to_excel(export_df).read()
+                            filename = f"RealtyMetric_CA_Agents_{timestamp}.xlsx"
+                        else:
+                            attachment = export_to_excel(export_df, include_summary=True, top_n=20).read()
+                            filename = f"RealtyMetric_Executive_Summary_{timestamp}.xlsx"
+                        
+                        success, message = send_email_report(recipient_email, attachment, filename)
+                        
+                        if success:
+                            st.success(f"✅ {message}")
+                        else:
+                            st.error(f"❌ {message}")
+        else:
+            st.markdown("**📧 Email Reports** 🔒")
+            st.caption("Upgrade to Professional")
+            st.info("Email reporting is available in Professional and Enterprise tiers. Contact sales@realtymetricsolutions.com to upgrade.")
+            
+            if st.button("💎 Upgrade Now", use_container_width=True):
+                st.markdown("[Contact Sales](mailto:sales@realtymetricsolutions.com?subject=Upgrade%20Request)")
+    
+    st.divider()
 
     # --- Footer ---
     st.markdown("""
     <div class="footer">
         <p>© 2026 RealtyMetric Solutions | Agent Recruiting Dashboard | Confidential</p>
-        <p>For support, contact: support@realtymetricsolutions.com | Version 1.3</p>
+        <p>For support, contact: support@realtymetricsolutions.com | Version 1.4</p>
     </div>
     """, unsafe_allow_html=True)
 
