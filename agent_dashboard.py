@@ -165,7 +165,7 @@ def load_and_prepare_data():
 def check_password():
     """Returns `True` if the user had the correct password."""
     def password_entered():
-        if st.session_state["password"] == st.secrets["password"]:
+        if "password" in st.session_state and st.session_state["password"] == st.secrets["password"]:
             st.session_state["password_correct"] = True
             del st.session_state["password"]
         else:
