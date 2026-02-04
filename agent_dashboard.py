@@ -737,15 +737,6 @@ def main():
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             use_container_width=True
         )
-        
-        pdf_buffer = export_to_pdf(export_df)
-        st.download_button(
-            label="📑 Download PDF",
-            data=pdf_buffer,
-            file_name=f"RealtyMetric_CA_Agents_{timestamp}.pdf",
-            mime="application/pdf",
-            use_container_width=True
-        )
     
     with col2:
         st.markdown("**Executive Summary**")
@@ -757,15 +748,6 @@ def main():
             data=exec_excel,
             file_name=f"RealtyMetric_Executive_{timestamp}.xlsx",
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            use_container_width=True
-        )
-        
-        exec_pdf = export_to_pdf(export_df, charts_data=None, top_n=20)
-        st.download_button(
-            label="📑 Summary (PDF)",
-            data=exec_pdf,
-            file_name=f"RealtyMetric_Executive_{timestamp}.pdf",
-            mime="application/pdf",
             use_container_width=True
         )
     
