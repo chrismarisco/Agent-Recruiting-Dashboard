@@ -243,7 +243,7 @@ def main():
             </div>
         </div>
         <div style="text-align:right; color:#A8C4E0; font-size:12px;">
-            <p style="margin:0;">Version 1.2</p>
+            <p style="margin:0;">Version 1.3</p>
             <p style="margin:2px 0 0 0;">© 2026 RealtyMetric Solutions</p>
         </div>
     </div>
@@ -302,10 +302,17 @@ def main():
     # --- How to Use ---
     with st.expander("🛈 How to Use This Tool"):
         st.markdown("""
+        - **Quick Filters:** Use one-click preset buttons for common searches:
+          - 🏆 Top Performers: Shows top 10% of agents by score
+          - 🔄 Recent Movers: Agents who moved within 90 days
+          - 💰 High Volume: Agents above median volume
+          - ⚡ Low DOM: Agents below median days on market
+        - **Clear All Filters:** Reset all filters and weights to defaults
         - **Adjust Weights:** Use the sidebar sliders to set how much each factor matters to your recruiting criteria.
-        - **Filter by County:** Select one or more counties to narrow your focus to specific markets.
+        - **Filter by County/Office:** Select specific markets or brokerages to focus your search.
+        - **Advanced Filters Toggle:** Show or hide detailed threshold filters.
         - **Set Thresholds:** Use Min Volume, Max DOM, and Max Recency to exclude agents who don't meet your minimums.
-        - **Search Agents:** Use the search bar in the sidebar to quickly find a specific agent by name.
+        - **Search Agents:** Use the search bar to quickly find a specific agent by name.
         - **Read the Charts:** The Top 10 chart shows your best candidates at a glance. The scatter plot shows score vs. volume.
         - **Export Data:** Download results as CSV or Excel for further analysis or sharing with your team.
         - **Missing Values:** Filters allow missing values — agents with missing DOM or Recency are kept but scored conservatively.
@@ -362,28 +369,91 @@ def main():
 
     # --- Sidebar ---
     with st.sidebar:
+        st.header("⚡ Quick Filters")
+        st.caption("One-click presets for common searches")
+        
+        col_q1, col_q2 = st.columns(2)
+        with col_q1:
+            top_performers = st.button("🏆 Top Performers", use_container_width=True, help="Top 10% by score")
+            high_volume = st.button("💰 High Volume", use_container_width=True, help="Above median volume")
+        with col_q2:
+            recent_movers = st.button("🔄 Recent Movers", use_container_width=True, help="Moved within 90 days")
+            low_dom = st.button("⚡ Low DOM", use_container_width=True, help="Below median DOM")
+        
+        # Clear filters button
+        if st.button("🔃 Clear All Filters", use_container_width=True):
+            for key in ['volume_weight', 'dom_weight', 'recency_weight', 'change_weight',
+                       'county_filter', 'office_filter', 'min_volume', 'max_dom', 'max_recency', 'search_query']:
+                if key in st.session_state:
+                    del st.session_state[key]
+            st.rerun()
+        
+        st.divider()
+        
         st.header("⚖️ Scoring Weights")
-        volume_weight   = st.slider("Weight: Volume",                  0.0, 1.0, 0.30, 0.05)
-        dom_weight      = st.slider("Weight: DOM (Lower is Better)",   0.0, 1.0, 0.35, 0.05)
-        recency_weight  = st.slider("Weight: Recency (Recent Better)", 0.0, 1.0, 0.20, 0.05)
-        change_weight   = st.slider("Weight: Office Changes",          0.0, 1.0, 0.20, 0.05)
+        volume_weight   = st.slider("Weight: Volume", 0.0, 1.0, 0.30, 0.05, key='volume_weight')
+        dom_weight      = st.slider("Weight: DOM (Lower is Better)", 0.0, 1.0, 0.35, 0.05, key='dom_weight')
+        recency_weight  = st.slider("Weight: Recency (Recent Better)", 0.0, 1.0, 0.20, 0.05, key='recency_weight')
+        change_weight   = st.slider("Weight: Office Changes", 0.0, 1.0, 0.20, 0.05, key='change_weight')
+        
         st.divider()
+        
         st.header("🔍 Filters")
-        st.caption("Rows with missing fields are kept")
-        counties = sorted(agents['County'].dropna().unique())
-        county_filter = st.multiselect("County (optional):", options=counties, default=None, help="Leave empty to include all counties")
-        min_volume  = st.number_input("Min Total Volume ($):", min_value=0, value=100000, step=100000, format="%d")
-        max_dom     = st.number_input("Max Days on Market:",   min_value=1, value=180, step=10)
-        max_recency = st.number_input("Max Days Since Move:",  min_value=1, value=999, step=50)
-        st.divider()
-        st.header("🔎 Agent Search")
-        search_query = st.text_input("Search by agent name...", placeholder="e.g. John Smith")
+        
+        # Agent Search
+        search_query = st.text_input("🔎 Search by agent name...", placeholder="e.g. John Smith", key='search_query')
+        
+        # Advanced filters toggle
+        show_advanced = st.checkbox("Show Advanced Filters", value=True)
+        
+        if show_advanced:
+            st.caption("Rows with missing fields are kept")
+            
+            # County filter
+            counties = sorted(agents['County'].dropna().unique())
+            county_filter = st.multiselect(
+                "County (optional):", 
+                options=counties, 
+                default=st.session_state.get('county_filter', None),
+                key='county_filter',
+                help="Leave empty to include all counties"
+            )
+            
+            # Office filter
+            offices = sorted(agents['OfficeName'].dropna().unique())
+            offices = [o for o in offices if str(o).strip() != '']
+            office_filter = st.multiselect(
+                "Office (optional):",
+                options=offices,
+                default=st.session_state.get('office_filter', None),
+                key='office_filter',
+                help="Leave empty to include all offices"
+            )
+            
+            min_volume  = st.number_input("Min Total Volume ($):", min_value=0, value=100000, step=100000, format="%d", key='min_volume')
+            max_dom     = st.number_input("Max Days on Market:", min_value=1, value=180, step=10, key='max_dom')
+            max_recency = st.number_input("Max Days Since Move:", min_value=1, value=999, step=50, key='max_recency')
+        else:
+            # Use defaults when advanced filters hidden
+            county_filter = st.session_state.get('county_filter', [])
+            office_filter = st.session_state.get('office_filter', [])
+            min_volume = st.session_state.get('min_volume', 100000)
+            max_dom = st.session_state.get('max_dom', 180)
+            max_recency = st.session_state.get('max_recency', 999)
 
     # --- Process Data ---
     def process_agents():
         df0 = agents.copy()
         total_rows = len(df0)
+        
+        # County filter
         df1 = df0[df0['County'].isin(county_filter)] if county_filter else df0.copy()
+        
+        # Office filter
+        if office_filter:
+            df1 = df1[df1['OfficeName'].isin(office_filter)]
+        
+        # Apply threshold filters (keep rows with NAs)
         df2 = df1.copy()
         if 'TotalVolume'  in df2.columns: df2 = df2[(df2['TotalVolume'].isna())  | (df2['TotalVolume']  >= min_volume)]
         if 'DaysOnMarket' in df2.columns: df2 = df2[(df2['DaysOnMarket'].isna()) | (df2['DaysOnMarket'] <= max_dom)]
@@ -417,9 +487,41 @@ def main():
         cols = ['Rank','FirstName','LastName','OfficeName','County','TotalVolume','DaysOnMarket','RecencyDays','Final_Score']
         cols = [c for c in cols if c in df_final.columns]
         df_display = df_final[cols].copy()
+        
+        # Apply Quick Filters
+        if top_performers:
+            # Top 10% by score
+            if len(df_display) > 0:
+                threshold = df_display['Final_Score'].quantile(0.90)
+                df_display = df_display[df_display['Final_Score'] >= threshold].reset_index(drop=True)
+                df_display['Rank'] = df_display.index + 1
+                st.info(f"🏆 Showing Top Performers (Score ≥ {threshold:.4f})")
+        
+        if recent_movers:
+            # Moved within 90 days
+            if 'RecencyDays' in df_display.columns:
+                df_display = df_display[(df_display['RecencyDays'].isna()) | (df_display['RecencyDays'] <= 90)].reset_index(drop=True)
+                df_display['Rank'] = df_display.index + 1
+                st.info("🔄 Showing Recent Movers (moved within 90 days)")
+        
+        if high_volume:
+            # Above median volume
+            if 'TotalVolume' in df_display.columns:
+                median_vol = df_display['TotalVolume'].median()
+                df_display = df_display[(df_display['TotalVolume'].isna()) | (df_display['TotalVolume'] >= median_vol)].reset_index(drop=True)
+                df_display['Rank'] = df_display.index + 1
+                st.info(f"💰 Showing High Volume Agents (≥ ${median_vol:,.0f})")
+        
+        if low_dom:
+            # Below median DOM
+            if 'DaysOnMarket' in df_display.columns:
+                median_dom = df_display['DaysOnMarket'].median()
+                df_display = df_display[(df_display['DaysOnMarket'].isna()) | (df_display['DaysOnMarket'] <= median_dom)].reset_index(drop=True)
+                df_display['Rank'] = df_display.index + 1
+                st.info(f"⚡ Showing Low DOM Agents (≤ {int(median_dom)} days)")
 
         # Agent search filter
-        if search_query.strip():
+        if search_query and search_query.strip():
             q = search_query.strip().lower()
             mask = (
                 df_display['FirstName'].str.lower().str.contains(q, na=False) |
@@ -457,10 +559,12 @@ def main():
     # --- Row Audit ---
     st.subheader("🔍 Row Audit")
     a1, a2, a3, a4 = st.columns(4)
-    with a1: st.metric("Rows in CSV",            f"{total_rows:,}")
-    with a2: st.metric("After County Filter",    f"{after_county:,}")
-    with a3: st.metric("After Thresholds",       f"{after_filters:,}")
-    with a4: st.metric("Rows Shown",             f"{len(df_display):,}")
+    with a1: st.metric("Rows in CSV", f"{total_rows:,}")
+    with a2: 
+        label = "After County/Office" if (county_filter or office_filter) else "After Filters"
+        st.metric(label, f"{after_county:,}")
+    with a3: st.metric("After Thresholds", f"{after_filters:,}")
+    with a4: st.metric("Rows Shown", f"{len(df_display):,}")
 
     # --- Top 10 Bar Chart ---
     st.subheader("🏆 Top 10 Agents by Recruiting Score")
@@ -586,7 +690,7 @@ def main():
     st.markdown("""
     <div class="footer">
         <p>© 2026 RealtyMetric Solutions | Agent Recruiting Dashboard | Confidential</p>
-        <p>For support, contact: support@realtymetricsolutions.com | Version 1.2</p>
+        <p>For support, contact: support@realtymetricsolutions.com | Version 1.3</p>
     </div>
     """, unsafe_allow_html=True)
 
