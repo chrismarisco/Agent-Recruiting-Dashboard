@@ -8,12 +8,6 @@ import re
 from io import StringIO, BytesIO
 import openpyxl
 from openpyxl.styles import Font, PatternFill, Alignment
-from reportlab.lib import colors
-from reportlab.lib.pagesizes import letter, A4
-from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, Image, PageBreak
-from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-from reportlab.lib.units import inch
-from reportlab.lib.enums import TA_CENTER, TA_LEFT
 import smtplib
 from email.mime.multipart import MIMEMultipart
 from email.mime.base import MIMEBase
@@ -195,7 +189,6 @@ def export_to_excel(df, include_summary=False, top_n=None):
     """Create a professionally formatted Excel export"""
     output = BytesIO()
     
-    # If top_n specified, limit to top N agents
     if top_n:
         df = df.head(top_n)
     
@@ -203,7 +196,6 @@ def export_to_excel(df, include_summary=False, top_n=None):
         df.to_excel(writer, index=False, sheet_name='Ranked Agents', startrow=2 if include_summary else 1)
         ws = writer.sheets['Ranked Agents']
         
-        # Styles
         title_font = Font(bold=True, size=16, color="FFFFFF")
         title_fill = PatternFill(start_color="1B2A4A", end_color="1B2A4A", fill_type="solid")
         subtitle_font = Font(size=11, color="666666", italic=True)
@@ -212,7 +204,6 @@ def export_to_excel(df, include_summary=False, top_n=None):
         header_align = Alignment(horizontal="center", vertical="center")
         alt_row_fill = PatternFill(start_color="F0F7FF", end_color="F0F7FF", fill_type="solid")
         
-        # Title row
         ws['A1'] = 'RealtyMetric Solutions – Agent Recruiting Report'
         ws['A1'].font = title_font
         ws['A1'].fill = title_fill
@@ -220,7 +211,6 @@ def export_to_excel(df, include_summary=False, top_n=None):
         ws.merge_cells(start_row=1, start_column=1, end_row=1, end_column=len(df.columns))
         ws.row_dimensions[1].height = 30
         
-        # Summary row if requested
         start_row = 3 if include_summary else 2
         if include_summary:
             ws['A2'] = f'Executive Summary - Top {top_n if top_n else len(df)} Recruiting Targets | Generated: {datetime.now().strftime("%B %d, %Y at %I:%M %p")}'
@@ -228,7 +218,6 @@ def export_to_excel(df, include_summary=False, top_n=None):
             ws.merge_cells(start_row=2, start_column=1, end_row=2, end_column=len(df.columns))
             ws.row_dimensions[2].height = 20
         
-        # Style header row
         for col in range(1, len(df.columns) + 1):
             cell = ws.cell(row=start_row, column=col)
             cell.font = header_font
@@ -236,121 +225,25 @@ def export_to_excel(df, include_summary=False, top_n=None):
             cell.alignment = header_align
         ws.row_dimensions[start_row].height = 25
         
-        # Auto-size columns
         for i, col_name in enumerate(df.columns, 1):
             max_len = max(len(str(col_name)), df[col_name].astype(str).str.len().max() or 0)
             col_letter = openpyxl.utils.get_column_letter(i)
             ws.column_dimensions[col_letter].width = min(max_len + 4, 30)
         
-        # Format currency column
         if 'TotalVolume' in df.columns:
             tv_col = list(df.columns).index('TotalVolume') + 1
             for row in range(start_row + 1, len(df) + start_row + 1):
                 ws.cell(row=row, column=tv_col).number_format = '$#,##0'
         
-        # Format score column
         if 'Final_Score' in df.columns:
             sc_col = list(df.columns).index('Final_Score') + 1
             for row in range(start_row + 1, len(df) + start_row + 1):
                 ws.cell(row=row, column=sc_col).number_format = '0.0000'
         
-        # Alternate row colors
         for row in range(start_row + 1, len(df) + start_row + 1, 2):
             for col in range(1, len(df.columns) + 1):
                 ws.cell(row=row, column=col).fill = alt_row_fill
     
-    output.seek(0)
-    return output
-
-#---------------------------
-# PDF Export
-#---------------------------
-def export_to_pdf(df, charts_data=None, top_n=None):
-    """Create a professionally formatted PDF export with charts"""
-    output = BytesIO()
-    
-    # If top_n specified, limit to top N agents
-    if top_n:
-        df = df.head(top_n)
-    
-    doc = SimpleDocTemplate(output, pagesize=letter, topMargin=0.5*inch, bottomMargin=0.5*inch)
-    elements = []
-    styles = getSampleStyleSheet()
-    
-    # Custom styles
-    title_style = ParagraphStyle(
-        'CustomTitle',
-        parent=styles['Heading1'],
-        fontSize=20,
-        textColor=colors.HexColor('#1B2A4A'),
-        spaceAfter=12,
-        alignment=TA_CENTER
-    )
-    
-    subtitle_style = ParagraphStyle(
-        'CustomSubtitle',
-        parent=styles['Normal'],
-        fontSize=11,
-        textColor=colors.HexColor('#666666'),
-        spaceAfter=20,
-        alignment=TA_CENTER,
-        fontName='Helvetica-Oblique'
-    )
-    
-    # Title
-    title = Paragraph("RealtyMetric Solutions", title_style)
-    subtitle = Paragraph(f"Agent Recruiting Report - Generated {datetime.now().strftime('%B %d, %Y')}", subtitle_style)
-    elements.append(title)
-    elements.append(subtitle)
-    
-    # Summary if top N
-    if top_n:
-        summary_text = f"<b>Executive Summary:</b> Top {top_n} recruiting targets based on weighted scoring algorithm"
-        summary = Paragraph(summary_text, styles['Normal'])
-        elements.append(summary)
-        elements.append(Spacer(1, 0.2*inch))
-    
-    # Add charts if provided
-    if charts_data:
-        for chart_name, chart_bytes in charts_data.items():
-            try:
-                img = Image(chart_bytes, width=6.5*inch, height=3.5*inch)
-                elements.append(img)
-                elements.append(Spacer(1, 0.2*inch))
-            except:
-                pass
-    
-    # Table data
-    table_data = [df.columns.tolist()] + df.values.tolist()
-    
-    # Create table
-    col_widths = [0.4*inch, 0.9*inch, 0.9*inch, 1.4*inch, 0.9*inch, 1*inch, 0.8*inch, 0.9*inch, 0.8*inch]
-    
-    t = Table(table_data, colWidths=col_widths, repeatRows=1)
-    t.setStyle(TableStyle([
-        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#2E5090')),
-        ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
-        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
-        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-        ('FONTSIZE', (0, 0), (-1, 0), 9),
-        ('BOTTOMPADDING', (0, 0), (-1, 0), 8),
-        ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
-        ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
-        ('FONTSIZE', (0, 1), (-1, -1), 7),
-        ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#F0F7FF')]),
-    ]))
-    
-    elements.append(t)
-    
-    # Footer
-    elements.append(Spacer(1, 0.3*inch))
-    footer = Paragraph(
-        "<i>© 2026 RealtyMetric Solutions | Confidential | support@realtymetricsolutions.com</i>",
-        styles['Normal']
-    )
-    elements.append(footer)
-    
-    doc.build(elements)
     output.seek(0)
     return output
 
@@ -751,60 +644,6 @@ def main():
         st.metric(label, f"{after_county:,}")
     with a3: st.metric("After Thresholds", f"{after_filters:,}")
     with a4: st.metric("Rows Shown", f"{len(df_display):,}")
-
-    # --- Top 10 Bar Chart ---
-    st.subheader("🏆 Top 10 Agents by Recruiting Score")
-    top10 = df_display.head(10).copy()
-    top10['Agent Name'] = top10['FirstName'] + ' ' + top10['LastName']
-    fig_bar = px.bar(
-        top10, x='Final_Score', y='Agent Name', orientation='h',
-        color='Final_Score', color_continuous_scale='Blues', text='Final_Score',
-        hover_data={'OfficeName': True, 'County': True, 'TotalVolume': ':$,.0f', 'Final_Score': ':.4f'}
-    )
-    fig_bar.update_layout(
-        yaxis=dict(categoryorder='total ascending', title=None),
-        xaxis_title="Recruiting Score", height=420,
-        showlegend=False, coloraxis_showscale=False
-    )
-    fig_bar.update_traces(texttemplate='%{text:.4f}', textposition='inside')
-    st.plotly_chart(fig_bar, use_container_width=True)
-
-    # --- County Charts (only shown if county data exists) ---
-    show_counties = has_county_data(df_display)
-
-    if show_counties:
-        st.subheader("🗺️ County Insights")
-        col_pie, col_vol = st.columns(2)
-
-        # County Distribution Pie Chart
-        with col_pie:
-            county_counts = df_display.groupby('County').size().reset_index(name='Agent Count')
-            county_counts = county_counts.sort_values('Agent Count', ascending=False)
-            fig_pie = px.pie(
-                county_counts, values='Agent Count', names='County',
-                color_discrete_sequence=px.colors.qualitative.Set2, hole=0.4,
-                title="Agent Distribution by County"
-            )
-            fig_pie.update_layout(height=420, showlegend=True, legend=dict(orientation="v", x=1.02, y=0.5))
-            fig_pie.update_traces(textinfo='percent', textposition='inside')
-            st.plotly_chart(fig_pie, use_container_width=True)
-
-        # Volume by County Bar Chart
-        with col_vol:
-            county_vol = df_display.dropna(subset=['TotalVolume']).groupby('County')['TotalVolume'].sum().reset_index()
-            county_vol = county_vol.sort_values('TotalVolume', ascending=True)
-            fig_vol = px.bar(
-                county_vol, x='TotalVolume', y='County', orientation='h',
-                color='TotalVolume', color_continuous_scale='Blues',
-                title="Total Volume by County"
-            )
-            fig_vol.update_layout(
-                height=420, xaxis_title="Total Volume ($)", yaxis_title=None,
-                showlegend=False, coloraxis_showscale=False,
-                xaxis=dict(tickprefix="$", tickformat=",")
-            )
-            fig_vol.update_traces(texttemplate='$%{x:,.0f}', textposition='inside')
-            st.plotly_chart(fig_vol, use_container_width=True)
 
     # --- Scatter Plot (colored by Score) ---
     st.subheader("📈 Score vs. Total Volume")
