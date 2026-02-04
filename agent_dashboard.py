@@ -966,7 +966,7 @@ def main():
     with col3:
         # Check user tier
         user_tier = st.secrets.get("tier", "starter")
-        
+        st.write(f"DEBUG: Current tier = {user_tier}")  # TEMPORARY - remove after testing
         if user_tier in ["professional", "enterprise"]:
             st.markdown("**📧 Email Report** 🌟")
             st.caption("Professional feature")
