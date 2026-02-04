@@ -303,7 +303,7 @@ def main():
     with st.expander("🛈 How to Use This Tool"):
         st.markdown("""
         - **Quick Filters:** Use one-click preset buttons for common searches:
-          - 🏆 Top Performers: Shows top 10% of agents by score
+          - 🏆 Top 10%: Shows top 10% of agents by score
           - 🔄 Recent Movers: Agents who moved within 90 days
           - 💰 High Volume: Agents above median volume
           - ⚡ Low DOM: Agents below median days on market
@@ -374,7 +374,7 @@ def main():
         
         col_q1, col_q2 = st.columns(2)
         with col_q1:
-            top_performers = st.button("🏆 Top Performers", use_container_width=True, help="Top 10% by score")
+            top_performers = st.button("🏆 Top 10%", use_container_width=True, help="Top performers by score")
             high_volume = st.button("💰 High Volume", use_container_width=True, help="Above median volume")
         with col_q2:
             recent_movers = st.button("🔄 Recent Movers", use_container_width=True, help="Moved within 90 days")
@@ -403,8 +403,8 @@ def main():
         # Agent Search
         search_query = st.text_input("🔎 Search by agent name...", placeholder="e.g. John Smith", key='search_query')
         
-        # Advanced filters toggle
-        show_advanced = st.checkbox("Show Advanced Filters", value=True)
+        # Advanced filters toggle (default hidden to make toggle more obvious)
+        show_advanced = st.checkbox("Show Advanced Filters", value=False)
         
         if show_advanced:
             st.caption("Rows with missing fields are kept")
@@ -430,9 +430,9 @@ def main():
                 help="Leave empty to include all offices"
             )
             
-            min_volume  = st.number_input("Min Total Volume ($):", min_value=0, value=100000, step=100000, format="%d", key='min_volume')
-            max_dom     = st.number_input("Max Days on Market:", min_value=1, value=180, step=10, key='max_dom')
-            max_recency = st.number_input("Max Days Since Move:", min_value=1, value=999, step=50, key='max_recency')
+            min_volume  = st.number_input("Min Total Volume ($):", min_value=0, value=st.session_state.get('min_volume', 100000), step=100000, format="%d", key='min_volume')
+            max_dom     = st.number_input("Max Days on Market:", min_value=1, value=st.session_state.get('max_dom', 180), step=10, key='max_dom')
+            max_recency = st.number_input("Max Days Since Move:", min_value=1, value=st.session_state.get('max_recency', 999), step=50, key='max_recency')
         else:
             # Use defaults when advanced filters hidden
             county_filter = st.session_state.get('county_filter', [])
@@ -495,7 +495,7 @@ def main():
                 threshold = df_display['Final_Score'].quantile(0.90)
                 df_display = df_display[df_display['Final_Score'] >= threshold].reset_index(drop=True)
                 df_display['Rank'] = df_display.index + 1
-                st.info(f"🏆 Showing Top Performers (Score ≥ {threshold:.4f})")
+                st.info(f"🏆 Showing Top 10% (Score ≥ {threshold:.4f})")
         
         if recent_movers:
             # Moved within 90 days
