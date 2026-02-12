@@ -16,7 +16,7 @@ from email import encoders
 
 # Configure page
 st.set_page_config(
-    page_title="RealtyMetric - Agent Recruiting Dashboard",
+    page_title="RealtyMetrics - Agent Recruiting Dashboard",
     page_icon="🏠",
     layout="wide"
 )
