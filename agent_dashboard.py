@@ -16,7 +16,7 @@ from email import encoders
 
 # Configure page
 st.set_page_config(
-    page_title="RealtyMetric - Agent Recruiting Dashboard",
+    page_title="Realty Metrics",
     page_icon="🏠",
     layout="wide"
 )
@@ -203,7 +203,7 @@ def export_to_excel(df, include_summary=False, top_n=None):
         header_align = Alignment(horizontal="center", vertical="center")
         alt_row_fill = PatternFill(start_color="F0F7FF", end_color="F0F7FF", fill_type="solid")
         
-        ws['A1'] = 'RealtyMetric – Agent Recruiting Report'
+        ws['A1'] = 'Realty Metrics – Agent Report'
         ws['A1'].font = title_font
         ws['A1'].fill = title_fill
         ws['A1'].alignment = Alignment(horizontal="left", vertical="center")
@@ -212,7 +212,7 @@ def export_to_excel(df, include_summary=False, top_n=None):
         
         start_row = 3 if include_summary else 2
         if include_summary:
-            ws['A2'] = f'Executive Summary - Top {top_n if top_n else len(df)} Recruiting Targets | Generated: {datetime.now().strftime("%B %d, %Y at %I:%M %p")}'
+            ws['A2'] = f'Executive Summary - Top {top_n if top_n else len(df)} Targets | Generated: {datetime.now().strftime("%B %d, %Y at %I:%M %p")}'
             ws['A2'].font = subtitle_font
             ws.merge_cells(start_row=2, start_column=1, end_row=2, end_column=len(df.columns))
             ws.row_dimensions[2].height = 20
@@ -265,22 +265,22 @@ def send_email_report(recipient_email, attachment_data, attachment_filename, att
         msg = MIMEMultipart()
         msg['From'] = sender_email
         msg['To'] = recipient_email
-        msg['Subject'] = f"RealtyMetric - Agent Recruiting Report - {date.today().strftime('%B %d, %Y')}"
+        msg['Subject'] = f"Realty Metrics - Agent Report - {date.today().strftime('%B %d, %Y')}"
         
         body = f"""
 Dear Valued Client,
 
-Please find attached your RealtyMetric Agent Recruiting Report generated on {datetime.now().strftime('%B %d, %Y at %I:%M %p')}.
+Please find attached your Realty Metrics Agent Report generated on {datetime.now().strftime('%B %d, %Y at %I:%M %p')}.
 
 This report contains your customized agent rankings based on your specified criteria.
 
 If you have any questions or need assistance, please don't hesitate to contact us at support@realtymetricsolutions.com.
 
 Best regards,
-The RealtyMetric Team
+The Realty Metrics Team
 
 ---
-© 2026 RealtyMetric | Confidential
+© 2026 Realty Metrics | Confidential
 """
         
         msg.attach(MIMEText(body, 'plain'))
@@ -322,13 +322,13 @@ def main():
                 <circle cx="62" cy="28" r="3.5" fill="#5CACEE"/>
             </svg>
             <div>
-                <h1 style="margin:0; font-size:28px; color:white;">RealtyMetric</h1>
-                <p style="margin:4px 0 0 0; color:#A8C4E0; font-size:14px;">Agent Recruiting Dashboard – California</p>
+                <h1 style="margin:0; font-size:28px; color:white;">Realty Metrics</h1>
+                <p style="margin:4px 0 0 0; color:#A8C4E0; font-size:14px;">Realty Metrics – California</p>
             </div>
         </div>
         <div style="text-align:right; color:#A8C4E0; font-size:12px;">
             <p style="margin:0;">Version 1.4</p>
-            <p style="margin:2px 0 0 0;">© 2026 RealtyMetric</p>
+            <p style="margin:2px 0 0 0;">© 2026 Realty Metrics</p>
         </div>
     </div>
     """, unsafe_allow_html=True)
@@ -342,7 +342,7 @@ def main():
     with st.expander("📖 About This Tool"):
         st.markdown("""
         ### What Is This Tool?
-        RealtyMetric' Agent Recruiting Dashboard is a data-driven platform designed to help 
+        Realty Metrics is a data-driven platform designed to help
         real estate brokerages identify, evaluate, and recruit top-performing agents. It analyzes publicly 
         available agent activity data and generates an objective recruiting score for each agent, helping 
         your team prioritize outreach efforts.
@@ -406,9 +406,9 @@ def main():
     with st.expander("⚖️ Disclaimer & Terms of Use"):
         st.markdown("""
         ### Disclaimer
-        RealtyMetric provides this dashboard for **informational purposes only**. The data and 
-        scores presented are based on publicly available information and proprietary algorithms, but are 
-        not guaranteed to be accurate, complete, or up to date. RealtyMetric makes no warranties, 
+        Realty Metrics provides this dashboard for **informational purposes only**. The data and
+        scores presented are based on publicly available information and proprietary algorithms, but are
+        not guaranteed to be accurate, complete, or up to date. Realty Metrics makes no warranties,
         express or implied, regarding the quality or fitness of this tool for any particular purpose.
 
         ---
@@ -418,7 +418,7 @@ def main():
 
         1. **Confidentiality:** All data displayed in this dashboard is confidential. You may not share, 
            distribute, or publish any information obtained from this tool without the prior written consent 
-           of RealtyMetric.
+           of Realty Metrics.
 
         2. **No Redistribution:** You may not copy, reproduce, or distribute the content of this dashboard 
            or any exports without authorization.
@@ -426,18 +426,18 @@ def main():
         3. **Authorized Use Only:** This tool is intended solely for the authorized user or organization. 
            Sharing login credentials or access with unauthorized parties is strictly prohibited.
 
-        4. **No Guarantee of Results:** Recruiting outcomes based on this tool are not guaranteed. 
-           RealtyMetric is not liable for any business decisions made based on the data or 
+        4. **No Guarantee of Results:** Recruiting outcomes based on this tool are not guaranteed.
+           Realty Metrics is not liable for any business decisions made based on the data or
            scores provided.
 
-        5. **Data Accuracy:** While we strive to provide accurate data, RealtyMetric is not 
+        5. **Data Accuracy:** While we strive to provide accurate data, Realty Metrics is not
            responsible for any errors or omissions in the data. Users should independently verify 
            information before making critical business decisions.
 
         6. **Intellectual Property:** The scoring methodology, algorithms, and dashboard design are the 
-           intellectual property of RealtyMetric and are protected by law.
+           intellectual property of Realty Metrics and are protected by law.
 
-        7. **Changes:** RealtyMetric reserves the right to update, modify, or discontinue 
+        7. **Changes:** Realty Metrics reserves the right to update, modify, or discontinue
            this service at any time without prior notice.
 
         ---
@@ -658,11 +658,11 @@ def main():
                 'TotalVolume': ':$,.0f', 'DaysOnMarket': ':.0f',
                 'RecencyDays': ':.0f', 'Final_Score': ':.3f'
             },
-            title="Recruiting Score vs Total Volume"
+            title="Realty Metrics Score vs Total Volume"
         )
 
         fig_scatter.update_layout(
-            xaxis_title="Total Volume ($)", yaxis_title="Recruiting Score",
+            xaxis_title="Total Volume ($)", yaxis_title="Realty Metrics Score",
             height=500, xaxis=dict(tickprefix="$", tickformat=",")
         )
         fig_scatter.update_traces(marker=dict(size=9))
@@ -724,7 +724,7 @@ def main():
         st.download_button(
             label="📄 Download CSV",
             data=csv_buffer.getvalue(),
-            file_name=f"RealtyMetric_CA_Agents_{timestamp}.csv",
+            file_name=f"RealtyMetrics_CA_Agents_{timestamp}.csv",
             mime="text/csv",
             use_container_width=True
         )
@@ -733,7 +733,7 @@ def main():
         st.download_button(
             label="📊 Download Excel",
             data=xlsx_buffer,
-            file_name=f"RealtyMetric_CA_Agents_{timestamp}.xlsx",
+            file_name=f"RealtyMetrics_CA_Agents_{timestamp}.xlsx",
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             use_container_width=True
         )
@@ -746,7 +746,7 @@ def main():
         st.download_button(
             label="📊 Summary (Excel)",
             data=exec_excel,
-            file_name=f"RealtyMetric_Executive_{timestamp}.xlsx",
+            file_name=f"RealtyMetrics_Executive_{timestamp}.xlsx",
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             use_container_width=True
         )
@@ -775,10 +775,10 @@ def main():
                     with st.spinner("Sending email..."):
                         if report_type == "Standard Excel":
                             attachment = export_to_excel(export_df).read()
-                            filename = f"RealtyMetric_CA_{timestamp}.xlsx"
+                            filename = f"RealtyMetrics_CA_{timestamp}.xlsx"
                         else:
                             attachment = export_to_excel(export_df, include_summary=True, top_n=20).read()
-                            filename = f"RealtyMetric_Executive_{timestamp}.xlsx"
+                            filename = f"RealtyMetrics_Executive_{timestamp}.xlsx"
                         
                         success, message = send_email_report(recipient_email, attachment, filename)
                         
@@ -789,14 +789,14 @@ def main():
         else:
             st.markdown("**📧 Email Reports** 🔒")
             st.caption("Upgrade to Professional")
-            st.info("Email reporting is available in Professional tier. Contact realtymetric@gmail.com")
+            st.info("Email reporting is available in Professional tier. Contact realtymetrics@gmail.com")
     
     st.divider()
 
     # --- Footer ---
     st.markdown("""
     <div class="footer">
-        <p>© 2026 RealtyMetric | Agent Recruiting Dashboard | Confidential</p>
+        <p>© 2026 Realty Metrics | Confidential</p>
         <p>For support, contact: support@realtymetricsolutions.com | Version 1.4</p>
     </div>
     """, unsafe_allow_html=True)
