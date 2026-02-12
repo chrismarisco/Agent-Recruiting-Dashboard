@@ -16,7 +16,7 @@ from email import encoders
 
 # Configure page
 st.set_page_config(
-    page_title="RealtyMetric Solutions - Agent Recruiting Dashboard",
+    page_title="RealtyMetric - Agent Recruiting Dashboard",
     page_icon="🏠",
     layout="wide"
 )
@@ -203,7 +203,7 @@ def export_to_excel(df, include_summary=False, top_n=None):
         header_align = Alignment(horizontal="center", vertical="center")
         alt_row_fill = PatternFill(start_color="F0F7FF", end_color="F0F7FF", fill_type="solid")
         
-        ws['A1'] = 'RealtyMetric Solutions – Agent Recruiting Report'
+        ws['A1'] = 'RealtyMetric – Agent Recruiting Report'
         ws['A1'].font = title_font
         ws['A1'].fill = title_fill
         ws['A1'].alignment = Alignment(horizontal="left", vertical="center")
@@ -265,22 +265,22 @@ def send_email_report(recipient_email, attachment_data, attachment_filename, att
         msg = MIMEMultipart()
         msg['From'] = sender_email
         msg['To'] = recipient_email
-        msg['Subject'] = f"RealtyMetric Solutions - Agent Recruiting Report - {date.today().strftime('%B %d, %Y')}"
+        msg['Subject'] = f"RealtyMetric - Agent Recruiting Report - {date.today().strftime('%B %d, %Y')}"
         
         body = f"""
 Dear Valued Client,
 
-Please find attached your RealtyMetric Solutions Agent Recruiting Report generated on {datetime.now().strftime('%B %d, %Y at %I:%M %p')}.
+Please find attached your RealtyMetric Agent Recruiting Report generated on {datetime.now().strftime('%B %d, %Y at %I:%M %p')}.
 
 This report contains your customized agent rankings based on your specified criteria.
 
 If you have any questions or need assistance, please don't hesitate to contact us at support@realtymetricsolutions.com.
 
 Best regards,
-The RealtyMetric Solutions Team
+The RealtyMetric Team
 
 ---
-© 2026 RealtyMetric Solutions | Confidential
+© 2026 RealtyMetric | Confidential
 """
         
         msg.attach(MIMEText(body, 'plain'))
@@ -322,13 +322,13 @@ def main():
                 <circle cx="62" cy="28" r="3.5" fill="#5CACEE"/>
             </svg>
             <div>
-                <h1 style="margin:0; font-size:28px; color:white;">RealtyMetric Solutions</h1>
+                <h1 style="margin:0; font-size:28px; color:white;">RealtyMetric</h1>
                 <p style="margin:4px 0 0 0; color:#A8C4E0; font-size:14px;">Agent Recruiting Dashboard – California</p>
             </div>
         </div>
         <div style="text-align:right; color:#A8C4E0; font-size:12px;">
             <p style="margin:0;">Version 1.4</p>
-            <p style="margin:2px 0 0 0;">© 2026 RealtyMetric Solutions</p>
+            <p style="margin:2px 0 0 0;">© 2026 RealtyMetric</p>
         </div>
     </div>
     """, unsafe_allow_html=True)
@@ -342,7 +342,7 @@ def main():
     with st.expander("📖 About This Tool"):
         st.markdown("""
         ### What Is This Tool?
-        RealtyMetric Solutions' Agent Recruiting Dashboard is a data-driven platform designed to help 
+        RealtyMetric' Agent Recruiting Dashboard is a data-driven platform designed to help 
         real estate brokerages identify, evaluate, and recruit top-performing agents. It analyzes publicly 
         available agent activity data and generates an objective recruiting score for each agent, helping 
         your team prioritize outreach efforts.
@@ -406,9 +406,9 @@ def main():
     with st.expander("⚖️ Disclaimer & Terms of Use"):
         st.markdown("""
         ### Disclaimer
-        RealtyMetric Solutions provides this dashboard for **informational purposes only**. The data and 
+        RealtyMetric provides this dashboard for **informational purposes only**. The data and 
         scores presented are based on publicly available information and proprietary algorithms, but are 
-        not guaranteed to be accurate, complete, or up to date. RealtyMetric Solutions makes no warranties, 
+        not guaranteed to be accurate, complete, or up to date. RealtyMetric makes no warranties, 
         express or implied, regarding the quality or fitness of this tool for any particular purpose.
 
         ---
@@ -418,7 +418,7 @@ def main():
 
         1. **Confidentiality:** All data displayed in this dashboard is confidential. You may not share, 
            distribute, or publish any information obtained from this tool without the prior written consent 
-           of RealtyMetric Solutions.
+           of RealtyMetric.
 
         2. **No Redistribution:** You may not copy, reproduce, or distribute the content of this dashboard 
            or any exports without authorization.
@@ -427,17 +427,17 @@ def main():
            Sharing login credentials or access with unauthorized parties is strictly prohibited.
 
         4. **No Guarantee of Results:** Recruiting outcomes based on this tool are not guaranteed. 
-           RealtyMetric Solutions is not liable for any business decisions made based on the data or 
+           RealtyMetric is not liable for any business decisions made based on the data or 
            scores provided.
 
-        5. **Data Accuracy:** While we strive to provide accurate data, RealtyMetric Solutions is not 
+        5. **Data Accuracy:** While we strive to provide accurate data, RealtyMetric is not 
            responsible for any errors or omissions in the data. Users should independently verify 
            information before making critical business decisions.
 
         6. **Intellectual Property:** The scoring methodology, algorithms, and dashboard design are the 
-           intellectual property of RealtyMetric Solutions and are protected by law.
+           intellectual property of RealtyMetric and are protected by law.
 
-        7. **Changes:** RealtyMetric Solutions reserves the right to update, modify, or discontinue 
+        7. **Changes:** RealtyMetric reserves the right to update, modify, or discontinue 
            this service at any time without prior notice.
 
         ---
@@ -796,7 +796,7 @@ def main():
     # --- Footer ---
     st.markdown("""
     <div class="footer">
-        <p>© 2026 RealtyMetric Solutions | Agent Recruiting Dashboard | Confidential</p>
+        <p>© 2026 RealtyMetric | Agent Recruiting Dashboard | Confidential</p>
         <p>For support, contact: support@realtymetricsolutions.com | Version 1.4</p>
     </div>
     """, unsafe_allow_html=True)
