@@ -274,7 +274,7 @@ Please find attached your Realty Metrics Agent Report generated on {datetime.now
 
 This report contains your customized agent rankings based on your specified criteria.
 
-If you have any questions or need assistance, please don't hesitate to contact us at support@realtymetricsolutions.com.
+If you have any questions or need assistance, please don't hesitate to contact us at support@realty-metrics.com.
 
 Best regards,
 The Realty Metrics Team
@@ -443,7 +443,7 @@ def main():
         ---
 
         *By accessing this dashboard, you acknowledge and agree to these terms. For questions regarding 
-        these terms, please contact support@realtymetricsolutions.com*
+        these terms, please contact info@realty-metrics.com*
         """)
 
     # Load data
@@ -789,7 +789,7 @@ def main():
         else:
             st.markdown("**📧 Email Reports** 🔒")
             st.caption("Upgrade to Professional")
-            st.info("Email reporting is available in Professional tier. Contact realtymetrics@gmail.com")
+            st.info("Email reporting is available in Professional tier. Contact sales@realty-metrics.com")
     
     st.divider()
 
@@ -797,7 +797,7 @@ def main():
     st.markdown("""
     <div class="footer">
         <p>© 2026 Realty Metrics | Confidential</p>
-        <p>For support, contact: support@realtymetricsolutions.com | Version 1.4</p>
+        <p>For support, contact: support@realty-metrics.com | Version 1.4</p>
     </div>
     """, unsafe_allow_html=True)
 
